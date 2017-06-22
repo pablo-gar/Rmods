@@ -1,4 +1,8 @@
 first git commit I want do
 
 # added for practicing changes in git
+<<<<<<< Updated upstream
 # in stash
+=======
+# added more stuff
+>>>>>>> Stashed changes
