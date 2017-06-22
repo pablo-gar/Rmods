@@ -1,3 +1,8 @@
 first git commit I want do
 # Trying pushing to github via ssh
 
+<<<<<<< Updated upstream
+=======
+# added for practicing changes in git
+# added more stuff
+>>>>>>> Stashed changes
