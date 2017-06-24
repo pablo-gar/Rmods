@@ -1,3 +1,5 @@
+source("~/scripts/Rmods/misc.r")
+
 testF <- function (x){
 	Sys.sleep(120)
 	return(T)
@@ -46,6 +48,8 @@ superApply <- function(x,FUN, ...,  tasks = 1, workingDir, extraScriptLines = ""
 	# Submits jobs
 	jobList <- vector(mode = "character",length = length(iStart))
 	
+	printTime("Submmiting parallel Jobs\n")
+	
 	for(i in 1:length(iStart)){
 		currentX <- x[iStart[i]:iEnd[i]]
 		jobList[i] <- paste0(idPrefix, i)
@@ -54,7 +58,7 @@ superApply <- function(x,FUN, ...,  tasks = 1, workingDir, extraScriptLines = ""
 		#Sys.sleep(0.8)
 	}
 	
-	cat (as.character(Sys.time()), " All parallel jobs submitted. Waiting for them to finish\n")
+	printTime(" All parallel jobs submitted. Waiting for them to finish\n")
 	
 	#####
 	# Waiting for jobs to finish
@@ -84,9 +88,13 @@ superApply <- function(x,FUN, ...,  tasks = 1, workingDir, extraScriptLines = ""
 		
 	}
 	
+	printTime("Jobs done\n")
+	
 	#####
 	# Collecting output from individual calls
+	printTime("Merging parellel results\n")
 	supperApplyResults <- mergeListDir (expectedOutFiles, expectedOutVariables, workingDir)
+	printTime("Merge done\n")
 	
 	if(clean)
 		system(paste0("rm ", file.path(workingDir, "*")))	
