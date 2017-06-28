@@ -5,17 +5,6 @@ printTime <- function(x = "") {
 	cat(as.character(Sys.time()), x)
 }
 
-trim <- function(x) { 
-		
-	# Trims white space from a character vector
-	
-	if(!is.character(x))
-		stop("x has to be string or a character vector")
-
-	return(gsub("\\s+", "", x))
-	
-}
-
 parseArg <- function(x, sep, trim = T) {
 		
 	#Takes a string an creates a vector using sep as the separator
@@ -35,6 +24,17 @@ parseArg <- function(x, sep, trim = T) {
 		x <- trim(x)
 	
 	return (unlist(strsplit(x,sep)))
+	
+}
+
+trim <- function(x) { 
+		
+	# Trims white space from a character vector
+	
+	if(!is.character(x))
+		stop("x has to be string or a character vector")
+
+	return(gsub("\\s+", "", x))
 	
 }
 

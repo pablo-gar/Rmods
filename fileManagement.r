@@ -20,15 +20,13 @@ joinPath <- function(..., sep = .Platform$file.sep){
 
 mkdirRecursive <- function(path) {
 	
-	# Creates a folder, and all the required upstream folder if they don't exits
+	# Creates a folder, and all the required upstream folders if they don't exist
 	
 	parent <- getParentPath(path)
 	
 	if(!dir.exists(parent)) {
 		mkdirRecursive(parent)
-	} #else {
-		dir.create(path)
-	#}
+	}
 }
 
 getParentPath <- function(path, sep = .Platform$file.sep) {
