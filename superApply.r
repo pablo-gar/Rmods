@@ -1,25 +1,81 @@
-source("~/scripts/Rmods/misc.r")
+#--------------------------------------------------------------------
+# DESCRIPTION
+# 
+# supperApply, it mimics the functionality of apply but implemented
+# in a way that each iteration of the apply is submmitted as an individual
+# job to a SLURM cluster. Hence emulating a parellel behaivor in apply
+#
+# Each job batch, err, out, and script files are stored in a temporary folder. Once
+# all jobs have been submmitted, the function waits for them to finish. Once the jobs
+# are done it compiles all the results into list and returns them, therefore fully
+# mimicking the apply behaivor.
+# 
+# Author: Pablo Garci 
+# 
+# Date: September, 2016
+# 
+# Requirements:
+#	Rmods/misc.r
+#	Rmods/submitSLURM.r
+#
+# IMPORTANT 
+# 	To load this script use
+# 	source("path/To/Rmods/submitSLURM.r", chdir = T)
+#--------------------------------------------------------------------
+
 
 testF <- function (x){
 	Sys.sleep(120)
 	return(T)
 }
 
-source("~/scripts/rModules/submitSLURM.r")
+source("./misc.r")
+source("./submitSLURM.r")
 
 #aaa <- superApply(1:2000, rep, times = 3, tasks = 10, workingDir = "~/deletemeR", clean = T, clusterPar = "--partition=hbfraser --time=60")
 #aaa <- superApply(1:10, testF, tasks = 10, workingDir = "~/deletemeR", clean = F, clusterPar = "--partition=hbfraser --time=15:00")
 #aaa <- superApply(1:10, testF, tasks = 10, workingDir = "~/deletemeR", clean = F, queue="hbfraser", time="15:00")
 
 
-#superApply <- function(x,FUN, ...,  tasks = 1, workingDir, clean = F, clusterPar = "--partition=hbfraser", extraScriptLines = ""){
-superApply <- function(x,FUN, ...,  tasks = 1, workingDir, extraScriptLines = "", clean = F, queue = "hbfraser", time = NULL, qos = NULL, mem = NULL){
+superApply <- function(x, FUN, ...,  tasks = 1, workingDir, extraScriptLines = "", clean = F, queue = "hbfraser", time = NULL, qos = NULL, mem = NULL){
 
+	# Main function that emulates apply but with parallel processing behaivor.
+	# It first divides elements of x into buckets of length(x)/tasks, then
+	# uses each bucket as individual elements where apply() will be used with FUN 
+	# as individual SLURM submissions.
+	# The submission process goes as follow for each bucket:
+	#   - Saves each bucket data as and RData file with an associated id name
+	#	- Creates an R script that will load the bucket RData and execute apply() and FUN. 
+	#     It will save the results as separate result RData file
+	#	- Creates a batch script that submmits the R script
+	#	- Submmits the job using the same id
+	# 
+	# Oncer all Jobs have been submmitted and finished it will compile all the result RData files
+	# from the inidividual jobs into a single list.
+	# This is the list to be returned
+	#
+	# ARGS:
+	# x - vector/list - FUN will be applied to the elements of this. If x is and integer of length one, FUN will be executed x times with pars "..."
+	# FUN - function - function to be applied to each element of x. 
+	# ... - further arguments of FUN
+	# tasks - integer - number of individual parallel jobs to execute
+	# workingDir - string - path to folder that will contain all the temporary files needed for submission, execution,
+    #                       and compilation of inidivudal jobs
+	# extraScriptLines - string - extra code to be added to all of the individual parallel jobs
+	#                             IMPORTANT: if FUN requires any library they have to be included here (e.g. extraScriptLines = "library(reshape); library(GenomicRanges)"
+	# time - string - time allocated to each individual job, format "hh:mm:ss"
+	# qos - string - SLURM qos
+	# mem - string - memory allocated to each individual job, e.g. "10G", "10000"
+	#
+	# Return - list - results of FUN applied to each element in x
+	
+	
+	# Creating working directory and clening in case it already exists
 	dir.create(workingDir, showWarnings = F, recursive = T)
 	setwd (workingDir)
 	system(paste0("rm ", file.path(workingDir, "*")))
 	
-	# Making unique ids	
+	# Making unique ids	for each submission
 	idPrefix <- paste0(c("sAp_", sample(letters, size=3), sample(0:9,size=1), "_"), collapse = "")
 
 	#####
