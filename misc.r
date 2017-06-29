@@ -1,8 +1,12 @@
-printTime <- function(x = "") {
+printTime <- function(x = "", carriageReturn = F) {
 	# Prints to console the current date and time followed by
 	# the message(s) in x
+	
+	first = ""
+	if(carriageReturn) first = "\r"
+	
 	flush.console()
-	cat(as.character(Sys.time()), x)
+	cat(first, as.character(Sys.time()), x)
 }
 
 parseArg <- function(x, sep, trim = T) {
