@@ -20,21 +20,32 @@
 #
 # IMPORTANT 
 # 	To load this script use
-# 	source("path/To/Rmods/submitSLURM.r", chdir = T)
+# 	source("path/To/Rmods/superApply.r", chdir = T)
+#--------------------------------------------------------------------
+
+source("./misc.r")
+source("./submitSLURM.r")
+source("./fileManagement.r")
+
+
+#--------------------------------------------------------------------
+# GLOBAL
+
+# Prefix for file generated for superApply
+SAP_PREFIX <- "sAp_"
+
+# Wait time to re check job status when they have been submitted
+SAP_WAIT_TIME <- 10
+
 #--------------------------------------------------------------------
 
 
 testF <- function (x){
-	Sys.sleep(120)
+	Sys.sleep(1)
 	return(T)
 }
 
-source("./misc.r")
-source("./submitSLURM.r")
-
-#aaa <- superApply(1:2000, rep, times = 3, tasks = 10, workingDir = "~/deletemeR", clean = T, clusterPar = "--partition=hbfraser --time=60")
-#aaa <- superApply(1:10, testF, tasks = 10, workingDir = "~/deletemeR", clean = F, clusterPar = "--partition=hbfraser --time=15:00")
-#aaa <- superApply(1:10, testF, tasks = 10, workingDir = "~/deletemeR", clean = F, queue="hbfraser", time="15:00")
+#aaa <- superApply(1:30, rep, tasks = 10, workingDir = "~/deletemeR", clean = F, time = "60", mem = "1G")
 
 
 superApply <- function(x, FUN, ...,  tasks = 1, workingDir, extraScriptLines = "", clean = F, queue = "hbfraser", time = NULL, qos = NULL, mem = NULL){
@@ -69,82 +80,45 @@ superApply <- function(x, FUN, ...,  tasks = 1, workingDir, extraScriptLines = "
 	#
 	# Return - list - results of FUN applied to each element in x
 	
-	
-	# Creating working directory and clening in case it already exists
-	dir.create(workingDir, showWarnings = F, recursive = T)
-	setwd (workingDir)
-	system(paste0("rm ", file.path(workingDir, "*")))
-	
-	# Making unique ids	for each submission
-	idPrefix <- paste0(c("sAp_", sample(letters, size=3), sample(0:9,size=1), "_"), collapse = "")
-
-	#####
-	# Parsing x, is it vector, list? or is it number of repetitions (i.e. x is just a number)?
 	FUN <- match.fun(FUN)
-	if(!is.vector(x)){
-		x <- as.list(x)
-		times <- length(x)
-	}else{
-		if(length(x) == 1 & is.numeric(x)){ # This will make apply ignore x and will execute FUN x times with ... arguments.
-			times <- x			# It requires a FUN that does nothing with its first argument
-			ignoreX <- TRUE
-		}else{
-			times <- length(x)
-		}
-	}
 	
-	#####
-	# Creates indexes to partition data for parallel processing
-	jobsPerTask <- ceiling(times/tasks)
-	iStart <- seq(1, times, jobsPerTask)
-	iEnd <- seq (jobsPerTask, times, jobsPerTask) 
-	if(iEnd[length(iEnd)] < times) 
-		iEnd <- c(iEnd,times)
+	# Getting indeces to partition X into different tasks (i.e. individual jobs)
+	partitionIndeces<- getPartitionIndeces(x, tasks = tasks)
 	
-	# Submits jobs
-	jobList <- vector(mode = "character",length = length(iStart))
-	
+	# Submmitting individual jobs
 	printTime("Submmiting parallel Jobs\n")
 	
-	for(i in 1:length(iStart)){
-		currentX <- x[iStart[i]:iEnd[i]]
-		jobList[i] <- paste0(idPrefix, i)
-		#submitLapplySlurm(currentX, FUN, ..., workingDir = workingDir, id = jobList[i], clusterPar = clusterPar, extraScriptLines = extraScriptLines)
-		submitLapplySlurm(currentX, FUN, ..., workingDir = workingDir, id = jobList[i], extraScriptLines = extraScriptLines, queue = queue, time = time, qos = qos, mem = mem)
-		#Sys.sleep(0.8)
-	}
+	jobs <- submitJobs(x, FUN, ..., partitionIndeces = partitionIndeces, workingDir = workingDir, extraScriptLines = extraScriptLines, queue = queue, time = time, qos = qos, mem = mem)
 	
-	printTime(" All parallel jobs submitted. Waiting for them to finish\n")
-	
-	#####
 	# Waiting for jobs to finish
-	expectedOutFiles <- paste0(jobList, ".outRData")
-	expectedOutVariables <- paste0("output_", jobList)
-	jobList <- paste0(jobList, collapse = ",")
+	expectedOutFiles <- paste0(jobs$jobName, ".outRData")
+	expectedOutVariables <- paste0("output_", jobs$jobName)
+
+	jobList <- paste0(jobs$jobName, collapse = ",")
+	cat(jobList, "\n")
+	
 	repeat{
 		
 		#Checking outdir for expected files
 		status <- checkFiles(expectedOutFiles, workingDir)
-		Sys.sleep(5)
+		
 		# Printing info 
 		jobStates <- getStateCount(jobList)
-		cat("\r", as.character(Sys.time()), " Expected number of Jobs =", length(iStart), "Not-yet-found =", status$remaining,"--- Cluster Status: " )
-		for(state in names(jobStates))
-			cat(state, "=", jobStates[state], "|")
+		#stopIfFailedJobs(jobStates)
+		printJobInfo(jobStates, status)
 		
-		if (status$status){
+		# If all jobs finished break the loop
+		if (status$finished){
 			#Printing info again because delay causes misleading printing info
 			jobStates <- getStateCount(jobList)		
-			cat("\n", as.character(Sys.time()), "DONE! Expected number of Jobs =", length(iStart), "Not-yet-found =", status$remaining,"--- Cluster Status: " )
-			for(state in names(jobStates))
-				cat(state, "=", jobStates[state], "|")
-			cat("\n")
+			printJobInfo(jobStates, status)
 			break	
 		}
 		
+		Sys.sleep(SAP_WAIT_TIME)
 	}
 	
-	printTime("Jobs done\n")
+	printTime("\nJobs done\n")
 	
 	#####
 	# Collecting output from individual calls
@@ -160,11 +134,82 @@ superApply <- function(x, FUN, ...,  tasks = 1, workingDir, extraScriptLines = "
 }
 
 
-#submitLapplySlurm <- function(x, FUN, ..., workingDir, id,  clusterPar, extraScriptLines = ""){
-submitLapplySlurm <- function(x, FUN, ..., workingDir, id, extraScriptLines = "", queue = "hbfraser", time = NULL, qos = NULL, mem = NULL){
+
+getPartitionIndeces <- function(x, tasks = tasks) {
 	
-	dir.create(workingDir, showWarnings = F)
-	setwd (workingDir)
+	# Helper of superApply
+	# Creates a list  with to slots, containing the start and end indeces 
+	# corresponding to the partitions of x required to run the number of parallel tasks
+	#
+	# Parsing x, is it vector, list? or is it number of repetitions (i.e. x is just a number)?
+	# This just to calculate the number of times the FUN has to be executed
+	if(!is.vector(x)){
+		x <- as.list(x)
+		times <- length(x)
+	}else{
+		if(length(x) == 1 & is.numeric(x)){ # This will make apply ignore x and will execute FUN x times with ... arguments.
+			times <- x			# It requires a FUN that does nothing with its first argument
+			ignoreX <- TRUE
+		}else{
+			times <- length(x)
+		}
+	}
+	
+	# Creates indexes to partition data for parallel processing
+	jobsPerTask <- ceiling(times/tasks)
+	iStart <- seq(1, times, jobsPerTask)
+	iEnd <- seq (jobsPerTask, times, jobsPerTask) 
+	if(iEnd[length(iEnd)] < times) 
+		iEnd <- c(iEnd,times)
+	
+	# Returns partition indices
+	result <- list(iStart = iStart, iEnd = iEnd)
+	return(result)
+
+}	
+
+submitJobs <- function(x, FUN, ..., partitionIndeces, workingDir, extraScriptLines, queue, time, qos, mem) {
+	
+	# Helper of superApply
+	# Submits multiple jobs from the partions of x created in get Partition Indeces
+	#
+	# x - list/vector - data to be partition
+	# FUN - function - function to be applied to each element of x
+	# partitionIndeces - list - output of getPartitionIndeces()
+	#
+	# RETURNS a data.frame of two columns, jobName and jobId
+	
+	
+	# Cleaning and or creating workind dir for submission
+	idPrefix <- SAP_PREFIX
+	dir.create(workingDir, showWarnings = F, recursive = T)
+	system(paste0("rm ", joinPath(workingDir, paste0(idPrefix, "*"))), ignore.stdout = T, ignore.stderr = T)
+	
+	# Making unique ids	for each submission
+	idPrefix <- paste0(c(idPrefix, sample(letters, size=3), sample(0:9,size=1), "_"), collapse = "")
+	
+	iStart <- partitionIndeces$iStart
+	iEnd <- partitionIndeces$iEnd
+	jobs <- data.frame(jobName = rep("", length(iStart)), jobId = "", stringsAsFactors = F)
+	
+	for(i in 1:length(iStart)){
+		
+		# Submitting jobs
+		currentX <- x[iStart[i]:iEnd[i]]
+		jobs[i, "jobName"] <- paste0(idPrefix, i)
+		
+		jobId <- submitLapplySlurm(currentX, FUN, ..., workingDir = workingDir, id = jobs[i, "jobName"], extraScriptLines = extraScriptLines, queue = queue, time = time, qos = qos, mem = mem)
+		cat(jobId, "\n")
+		
+		# Saving ids
+		jobs[i, "jobId"] <- jobId
+	}
+	
+	return(jobs)
+}
+
+
+submitLapplySlurm <- function(x, FUN, ..., workingDir, id, extraScriptLines = "", queue = "hbfraser", time = NULL, qos = NULL, mem = NULL){
 	
 	# Setting file and var names
 	#xDataFile <- file.path(workingDir, paste0(id, ".xRData"))
@@ -236,9 +281,29 @@ getStateCount <- function(jobNames) {
 }
 
 checkFiles <- function (x,workingDir){
-	remaining <- sum( !x %in% list.files(workingDir)) 
-	status <- ifelse(remaining == 0, TRUE, FALSE)
 	
-	return(list(status = status, remaining = remaining))
+	applyFiles <- list.files(workingDir)[grep(SAP_PREFIX, list.files(workingDir))]
+	remaining <- sum( !x %in% applyFiles) 
+	
+	finished <- ifelse(remaining == 0, TRUE, FALSE)
+	total <- length(x)
+	
+	
+	return(list(finished = finished, remaining = remaining, total = total))
 }
 
+printJobInfo <- function(jobStates, status) {
+	
+	# Prints the current state of submitted jobs in the format
+	#  Expected number of Jobs = X Not-yet-found = --- Cluster Status: COMPLETED=10|RUNNING=2
+	# 
+	# jobStates - vector/table - output of getStateCount
+	# status - list - output of check files
+	
+	# Print expected number of jobs
+	printTime(carriageReturn = T, x = paste0(" Expected number of Jobs = ", status$total, "; Not-yet-found = ", status$remaining," --- Cluster Status: "))
+	
+	# Print how many have been completed, running, etc
+	for(state in names(jobStates))
+		cat(state, "=", jobStates[state], "|")
+}
