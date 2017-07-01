@@ -1,7 +1,7 @@
 #--------------------------------------------------------------------
 # DESCRIPTION
 # 
-# supperApply, it mimics the functionality of apply but implemented
+# supperApply, it mimics the functionality of lapply but implemented
 # in a way that each iteration of the apply is submmitted as an individual
 # job to a SLURM cluster. Hence emulating a parellel behaivor in apply
 #
@@ -10,7 +10,7 @@
 # are done it compiles all the results into list and returns them, therefore fully
 # mimicking the apply behaivor.
 # 
-# Author: Pablo Garci 
+# Author: Pablo Garcia
 # 
 # Date: September, 2016
 # 
@@ -37,6 +37,17 @@ SAP_PREFIX <- "sAp_"
 # Wait time to re check job status when they have been submitted
 SAP_WAIT_TIME <- 10
 
+# Error messages from scheduler
+SCH_FAIL_MSG <- "FAILED"
+SCH_TIMEOUT_MSG <- "TIMEOUT"
+SCH_CANCEL_MSG <- "CANCELLED"
+SCH_NODEFAIL_MSG <- "NODE_FAIL"
+SCH_PREEMPTED_MSG <- "PREEMPTED"
+
+SCH_ERROR_MSG <- c(SCH_FAIL_MSG, SCH_TIMEOUT_MSG, SCH_CANCEL_MSG, SCH_NODEFAIL_MSG, SCH_PREEMPTED_MSG)
+
+# Name of file containing job information in case one or more jobs fail (will be stored in working dir of superApply())
+FAILED_LOG_FILE <- "1_LOG_JOBS.txt"
 #--------------------------------------------------------------------
 
 
@@ -93,39 +104,38 @@ superApply <- function(x, FUN, ...,  tasks = 1, workingDir, extraScriptLines = "
 	# Waiting for jobs to finish
 	expectedOutFiles <- paste0(jobs$jobName, ".outRData")
 	expectedOutVariables <- paste0("output_", jobs$jobName)
-
 	jobList <- paste0(jobs$jobName, collapse = ",")
-	cat(jobList, "\n")
 	
 	repeat{
 		
 		#Checking outdir for expected files
 		status <- checkFiles(expectedOutFiles, workingDir)
 		
-		# Printing info 
+		# Printing info and stop if an error is found
 		jobStates <- getStateCount(jobList)
-		#stopIfFailedJobs(jobStates)
-		printJobInfo(jobStates, status)
+		stopIfFailedJobs(jobStates, workingDir = workingDir)
+		printJobInfo(jobStates$stateFrequency, status)
 		
 		# If all jobs finished break the loop
 		if (status$finished){
-			#Printing info again because delay causes misleading printing info
-			jobStates <- getStateCount(jobList)		
-			printJobInfo(jobStates, status)
 			break	
 		}
 		
 		Sys.sleep(SAP_WAIT_TIME)
 	}
 	
-	printTime("\nJobs done\n")
+	cat("\n")
+	printTime("Jobs done. Final State:\n")
+	jobStates <- getStateCount(jobList)		
+	printJobInfo(jobStates$stateFrequency, status)
+	cat("\n")
 	
-	#####
 	# Collecting output from individual calls
 	printTime("Merging parellel results\n")
 	supperApplyResults <- mergeListDir (expectedOutFiles, expectedOutVariables, workingDir)
 	printTime("Merge done\n")
 	
+	# Removing jobs files if desired
 	if(clean)
 		system(paste0("rm ", file.path(workingDir, "*")))	
 	
@@ -211,40 +221,44 @@ submitJobs <- function(x, FUN, ..., partitionIndeces, workingDir, extraScriptLin
 
 submitLapplySlurm <- function(x, FUN, ..., workingDir, id, extraScriptLines = "", queue = "hbfraser", time = NULL, qos = NULL, mem = NULL){
 	
+	# Helper of superApply
+	# Takes a vector/list x, a function FUN and extra paramaters (...) and submits an Rscript
+	# that executes lappy in x using FUN, saves the scripts, results and slurm fil;e in workingDir  
+	# 
+	# x - vector/list - data to which lapply will be executed
+	# FUN - function - function to be applied to x
+	# ... - extra paramaters passed to FUN
+	# extraScriptLines - string - lines to be added at the beginning of the Rscript before lapply (useful to load packages)
+	# queue - string - queue in SLURM for job submission
+	# time - string - estimated time for lapply to finish, format "hh:mm:ss"
+	# qos - string - SLURM qos
+	# mem - string - estimated memory requiered by lapply execution, format e.g "10G"
+	
 	# Setting file and var names
-	#xDataFile <- file.path(workingDir, paste0(id, ".xRData"))
-	#funDataFile <- file.path(workingDir, paste0(id, ".funRData"))
-	#parsDataFile <- file.path(workingDir, paste0(id, ".parsRData"))
 	outDataFile <- file.path(workingDir, paste0(id, ".outRData"))
 	dataFile <- file.path(workingDir, paste0(id, ".applyRData"))
 	
 	#Saving RData files used in script
-	#save(x, file = xDataFile)
-	#save(FUN, file = funDataFile)	
-	#save(pars, file = parsDataFile)
 	pars <- list(...)
-	save(x,FUN,pars, file = dataFile)
-	rm(x,FUN,pars)
+	save(x, FUN, pars, file = dataFile)
+	rm(x, FUN, pars)
 	gc()
 	
 	#Making script to be submmited
 	tempScriptFile <- file.path(workingDir, paste0(id, ".parallelBatch"))
-	tempScript <- c(extraScriptLines,
-				#paste0("load('", xDataFile, "')"),
-				#paste0("load('", funDataFile, "')"),
-				#paste0("load('",  parsDataFile, "')"),					
-				paste0("load('",  dataFile, "')"),					
-				paste0("output_", id, " <- do.call( lapply, c(list(X = x, FUN = FUN), pars))" ),
-				paste0("save(output_", id, ", file='", outDataFile, "')")
-			)
+	tempScript <- c(
+					extraScriptLines,
+					paste0("load('",  dataFile, "')"),					
+					paste0("output_", id, " <- do.call( lapply, c(list(X = x, FUN = FUN), pars))" ),
+					paste0("save(output_", id, ", file='", outDataFile, "')")
+					)
 	
 	RscriptFile <- file.path(workingDir, paste0(id, ".Rscript"))
 	writeLines (tempScript, RscriptFile)
+	
+	# Submitting job
 	cmds <- c("module load R/3.3.0", paste0("Rscript --vanilla ", RscriptFile))
 	clusterSubmit(id, workingDir, cmds, queue = queue, time = time, qos = qos, mem = mem, nodes = 1, proc = 1)
-	
-	#sallocCmd <- paste0("salloc --nodes=1 --quiet --ntasks=1 ", clusterPar," --job-name=", id, " Rscript --vanilla ", RscriptFile)
-	#system(sallocCmd, wait = F )
 	
 }
 
@@ -274,10 +288,21 @@ mergeListDir <- function(files, varNames, workingDir){
 
 
 getStateCount <- function(jobNames) {
-	jobStates <- system(paste0("sacct --noheader --parsable2 --format=JobID,State --name=", jobNames), intern = T )
-	jobStates <- jobStates[ !grepl("\\..+", jobStates) ]
-	jobStates <- gsub(".+\\|(.+)", "\\1", jobStates)
-	return(table(jobStates))
+	jobInfo <- system(paste0("sacct --noheader --parsable2 --format=JobID,JobName,State --name=", jobNames), intern = T )
+	#jobInfo <- jobInfo[grepl(SAP_PREFIX, jobInfo)]
+	jobInfo <- jobInfo[ !grepl("\\..+", jobInfo) ]
+	
+	
+	jobIds <- gsub("(.+)\\|.+\\|.+", "\\1", jobInfo) 
+	jobNames <- gsub(".+\\|(.+)\\|.+", "\\1", jobInfo) 
+	jobStates <- gsub(".+\\|.+\\|(.+)", "\\1", jobInfo)
+	
+	result <- list(
+				   jobStates = data.frame(jobId = jobIds, jobName = jobNames, jobState = jobStates, stringsAsFactors = F),
+				   stateFrequency = table(jobStates)
+				   )
+	
+	return(result)
 }
 
 checkFiles <- function (x,workingDir){
@@ -292,18 +317,38 @@ checkFiles <- function (x,workingDir){
 	return(list(finished = finished, remaining = remaining, total = total))
 }
 
-printJobInfo <- function(jobStates, status) {
+stopIfFailedJobs <- function(jobStates, workingDir) { 
 	
+	# Helper of superApply
+	# Stops execution if one of the jobs failed
+	# 
+	# Saves a final state error file in working dir indicating which jobs failed
+	#
+	# jobStates - list - output of getStateCount()
+	
+	if( sum(names(jobStates$stateFrequency) %in% SCH_ERROR_MSG)  > 0 ) {
+		write.table(jobStates$jobStates, joinPath(workingDir, FAILED_LOG_FILE), sep = "\t", row.names = F, quote = F)
+		cat("\n")
+		stop(paste0("One or more jobs failed, take a look at ", joinPath(workingDir, FAILED_LOG_FILE)))
+	}
+	
+	
+}
+	
+
+printJobInfo <- function(jobStatesFreq, status) {
+	
+	# Helper of superApply
 	# Prints the current state of submitted jobs in the format
 	#  Expected number of Jobs = X Not-yet-found = --- Cluster Status: COMPLETED=10|RUNNING=2
 	# 
-	# jobStates - vector/table - output of getStateCount
+	# jobStatesFreq - vector/table - slot "stateFreqency" of getStateCount() output 
 	# status - list - output of check files
 	
 	# Print expected number of jobs
-	printTime(carriageReturn = T, x = paste0(" Expected number of Jobs = ", status$total, "; Not-yet-found = ", status$remaining," --- Cluster Status: "))
+	printTime(carriageReturn = T, x = paste0("Expected number of Jobs = ", status$total, "; Not-yet-found = ", status$remaining," --- Cluster Status: "))
 	
 	# Print how many have been completed, running, etc
-	for(state in names(jobStates))
-		cat(state, "=", jobStates[state], "|")
+	for(state in names(jobStatesFreq))
+		cat(state, "=", jobStatesFreq[state], "|")
 }
