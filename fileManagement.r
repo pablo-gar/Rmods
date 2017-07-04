@@ -27,6 +27,8 @@ mkdirRecursive <- function(path) {
 	if(!dir.exists(parent)) {
 		mkdirRecursive(parent)
 	}
+	
+	dir.create(path)
 }
 
 getParentPath <- function(path, sep = .Platform$file.sep) {
