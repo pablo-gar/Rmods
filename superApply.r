@@ -37,6 +37,10 @@ SAP_PREFIX <- "sAp_"
 # Wait time to re check job status when they have been submitted
 SAP_WAIT_TIME <- 10
 
+
+# Completed message from scheduler
+SCH_COMPLETED = "COMPLETED"
+
 # Error messages from scheduler
 SCH_FAIL_MSG <- "FAILED"
 SCH_TIMEOUT_MSG <- "TIMEOUT"
@@ -104,21 +108,27 @@ superApply <- function(x, FUN, ...,  tasks = 1, workingDir, extraScriptLines = "
 	# Waiting for jobs to finish
 	expectedOutFiles <- paste0(jobs$jobName, ".outRData")
 	expectedOutVariables <- paste0("output_", jobs$jobName)
+	expectedNjobs <- nrow(jobs)
 	jobList <- paste0(jobs$jobName, collapse = ",")
 	
 	repeat{
 		
 		#Checking outdir for expected files
-		status <- checkFiles(expectedOutFiles, workingDir)
+		status <- checkFiles(expectedOutFiles, workingDir) # THERE IS A SMALL BUG WITH THIS ONE
 		
 		# Printing info and stop if an error is found
 		jobStates <- getStateCount(jobList)
 		stopIfFailedJobs(jobStates, workingDir = workingDir)
 		printJobInfo(jobStates$stateFrequency, status)
 		
+		completed <- jobStates$stateFrequency[SCH_COMPLETED]
+		
 		# If all jobs finished break the loop
-		if (status$finished){
-			break	
+		#if (status$finished){
+		if (!is.na(completed)){
+			if (completed == expectedNjobs) {
+				break	
+			}
 		}
 		
 		Sys.sleep(SAP_WAIT_TIME)
@@ -263,6 +273,11 @@ submitLapplySlurm <- function(x, FUN, ..., workingDir, id, extraScriptLines = ""
 }
 
 mergeListDir <- function(files, varNames, workingDir){
+	
+	finishedFiles <- files %in% list.files(workingDir)
+	files <- files [finishedFiles]
+	varNames <- varNames[finishedFiles]
+	
 	finalF <- list()
 	for (i in 1:length(files)){
 		load(file.path(workingDir,files[i]))
