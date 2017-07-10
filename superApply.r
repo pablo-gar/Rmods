@@ -109,7 +109,7 @@ superApply <- function(x, FUN, ...,  tasks = 1, workingDir, extraScriptLines = "
 	expectedOutFiles <- paste0(jobs$jobName, ".outRData")
 	expectedOutVariables <- paste0("output_", jobs$jobName)
 	expectedNjobs <- nrow(jobs)
-	jobList <- paste0(jobs$jobName, collapse = ",")
+	jobList <- paste0(jobs$jobId, collapse = ",")
 	
 	repeat{
 		
@@ -302,9 +302,9 @@ mergeListDir <- function(files, varNames, workingDir){
 #}
 
 
-getStateCount <- function(jobNames) {
-	jobInfo <- system(paste0("sacct --noheader --parsable2 --format=JobID,JobName,State --name=", jobNames), intern = T )
-	#jobInfo <- jobInfo[grepl(SAP_PREFIX, jobInfo)]
+getStateCount <- function(jobIds) {
+	jobInfo <- system(paste0("sacct --noheader --parsable2 --format=JobID,JobName,State --job=", jobIds), intern = T )
+	jobInfo <- jobInfo[grepl(SAP_PREFIX, jobInfo)]
 	jobInfo <- jobInfo[ !grepl("\\..+", jobInfo) ]
 	
 	
