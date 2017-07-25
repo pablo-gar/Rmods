@@ -42,3 +42,22 @@ trim <- function(x) {
 	
 }
 
+grepTempFile <- function(x, pattern, tempLocation = "."){
+	        
+	# Creates a new file based of x only with lines containing
+	# the specified pattern(s)
+	#
+	# WARNING: uses unix grep
+	#   
+	# x - string - path to file
+	# pattern - vector - patterns to select in file
+
+	patternArg <- paste0("-e ", paste0(pattern, collapse = " -e "))
+	outFile <- file.path(tempLocation, paste0(basename(x), ".temp", sample(1:1000, 1)))
+
+	system(paste("grep", patternArg, x, ">", outFile))
+
+	return(outFile)
+
+}
+
