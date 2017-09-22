@@ -61,3 +61,20 @@ grepTempFile <- function(x, pattern, tempLocation = "."){
 
 }
 
+rankitNormalize <- function(x, IND = 1) {
+
+    # Normalizes rows (IND = 1) or columns (IND = 2)
+    # to a quantile standard normalization (i.e. rankit)
+
+    stopifnot(is.matrix(x))
+    stopifnot(is.numeric(x))
+
+    x <- apply(x, IND, function(x) qnorm((rank(x) - 0.5) / length(x)))
+    if(IND == 1)
+        x <- t(x)
+
+    return(x)
+
+}
+
+
