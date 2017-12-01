@@ -77,4 +77,12 @@ rankitNormalize <- function(x, IND = 1) {
 
 }
 
+sourceDir <- function (path, pattern = "\\.[rR]$", env = NULL, chdir = TRUE) {
+    
+    # Sources all files in a folder using relative paths 
+    
+    files <- sort(dir(path, pattern, full.names = TRUE))
+    lapply(files, source, chdir = chdir)
+}
+
 
