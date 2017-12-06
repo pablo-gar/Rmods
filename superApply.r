@@ -46,9 +46,9 @@ SCH_FAIL_MSG <- "FAILED"
 SCH_TIMEOUT_MSG <- "TIMEOUT"
 SCH_CANCEL_MSG <- "CANCELLED"
 SCH_NODEFAIL_MSG <- "NODE_FAIL"
-SCH_PREEMPTED_MSG <- "PREEMPTED"
+#SCH_PREEMPTED_MSG <- "PREEMPTED"
 
-SCH_ERROR_MSG <- c(SCH_FAIL_MSG, SCH_TIMEOUT_MSG, SCH_CANCEL_MSG, SCH_NODEFAIL_MSG, SCH_PREEMPTED_MSG)
+SCH_ERROR_MSG <- c(SCH_FAIL_MSG, SCH_TIMEOUT_MSG, SCH_CANCEL_MSG, SCH_NODEFAIL_MSG)
 
 # Name of file containing job information in case one or more jobs fail (will be stored in working dir of superApply())
 FAILED_LOG_FILE <- "1_LOG_JOBS.txt"
@@ -158,7 +158,7 @@ superApply <- function(x, FUN, ...,  tasks = 1, workingDir, extraScriptLines = "
 getPartitionIndeces <- function(x, tasks = tasks) {
 	
 	# Helper of superApply
-	# Creates a list  with to slots, containing the start and end indeces 
+	# Creates a list  with slots, containing the start and end indeces 
 	# corresponding to the partitions of x required to run the number of parallel tasks
 	#
 	# Parsing x, is it vector, list? or is it number of repetitions (i.e. x is just a number)?

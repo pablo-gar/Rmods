@@ -37,7 +37,7 @@ TIME_WAIT_MAXJOBS = 60
 SLURM_USER = "paedugar"
 
 # Max number of jobs allowed in cluster
-SLURM_MAX_JOBS = 3000
+SLURM_MAX_JOBS = 2000
 #--------------------------------------------------------------------
 
 
