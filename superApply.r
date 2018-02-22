@@ -267,8 +267,8 @@ submitLapplySlurm <- function(x, FUN, ..., workingDir, id, extraScriptLines = ""
 	writeLines (tempScript, RscriptFile)
 	
 	# Submitting job
-	cmds <- c("module load R/3.3.0", paste0("Rscript --vanilla ", RscriptFile))
-	clusterSubmit(id, workingDir, cmds, queue = queue, time = time, qos = qos, mem = mem, nodes = 1, proc = 1)
+	cmds <- c("module load R/3.4.0", paste0("Rscript --vanilla ", RscriptFile))
+	clusterSubmit(id, workingDir, cmds, queue = queue, time = time, qos = qos, mem = mem, proc = 1)
 	
 }
 
