@@ -61,6 +61,14 @@ theme_grid_y <- function (base_size = 12, base_family = "")
             )
 }
 
+theme_grid_x <- function (base_size = 12, base_family = "") 
+{
+    theme_noGrid(base_size = base_size, base_family = base_family) %+replace% 
+        theme(
+                panel.grid.major.x = element_line(colour = "grey78",size = 0.3),
+                panel.grid.minor.x = element_line(colour = "grey88",size = 0.25),
+            )
+}
 
 
 theme_fullBlank <- function (base_size = 12, base_family = "") 
