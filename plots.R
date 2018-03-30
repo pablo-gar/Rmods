@@ -1,87 +1,200 @@
 library(ggplot2)
 library(reshape)
 library(gplots)
-scatter <- function(dataframe, x, y, facet_x = NULL, facet_y = NULL, scales = "free", labelSize = 4, labelRound = 2, regression = F, nrowFactor = 1, ncolFactor = 1) {
-        # Makes a scatter plot from a data frame with the following columns
-        # x = string; column with data for x axis
-        # y = string, column with data for y axis
-        # facet_x = factor, column with factor to subdivide the data and plot in different columns
-        # facet_y = factor, column with factor to subdivide the data and plot in different rows
-        #
-        # dataframe = data.frame, with the columns indicated above
-        #
-        # ... further parameters for facet_wrap
-        #
-        # returns a plot object of ggplot2
-        
-        require(ggplot2)
-        
-        #--------------------------
-        # Checking parameters 
-        #--------------------------
-        
-        if(!is.data.frame(dataframe)) stop ("dataframe has to be a data.frame")
-        if(!is.character(x) | !is.character(y) | length(x) > 1 | length(y) > 1) stop ("x and y have to be character vectors of length one")
-        if(!isCol(x, dataframe) | !isCol(y,dataframe)) stop ("x and y have to be columns of dataframe")
-        
-        if(!is.null(facet_x))
-           if(!isCol(facet_x, dataframe)) 
-               stop("facet_x has to be a column of dataframe or null")
-        if(!is.null(facet_y)) 
-            if(!isCol(facet_y, dataframe)) 
-                stop("facet_y has to be a column of dataframe or null")
-        
-        
-        #-----------------------------
-        # Getting correlation strings
-        #-----------------------------
-        
-        Params <- list(dataframe = dataframe, x = x, y = y, labelRound = labelRound)
-        
-        if (is.null(facet_y) & is.null(facet_x)) {
-            Params <- c(Params, list(cat = NULL))
-            facetForm <- ""
-        } else if(is.null(facet_y)) {
-            Params <- c(Params, list(cat = facet_x))
-            facetForm <- paste0("~", facet_x)
-            ncol <- length(unique(dataframe[,facet_x]))
-            nrow <- 1 * nrowFactor
-        } else if(is.null(facet_x)) {
-            Params <- c(Params, list(cat = facet_y))
-            facetForm <- paste0(facet_y, "~")
-            ncol <- 1 * ncolFactor
-            nrow <- length(unique(dataframe[,facet_y]))
-        } else {
-            Params <- c(Params, list(cat = c(facet_x, facet_y)))
-            facetForm <- paste0(facet_y, "~", facet_x)
-            ncol <- length(unique(dataframe[,facet_x]))
-            nrow <- length(unique(dataframe[,facet_y]))
-        }
-        
-        corString <- do.call(getCorString, Params)
-        
-        corString$x <- -Inf
-        corString$y <- Inf
-        colnames(corString)[ (ncol(corString) - 1) : ncol(corString)] <- c(x,y)
-        
-        #----------------------------
-        # Making plots
-        #----------------------------
-        p <- ggplot(dataframe, aes_string( x = x, y = y )) +
-        geom_point() + 
-        geom_text(aes(label = text), data = corString, hjust = 0, vjust = 1, size = labelSize) + 
-        theme_bw()
-        
-        if(!is.null(facet_x) | !is.null(facet_y)){
-            facetForm <- as.formula(facetForm)
-            p <- p + facet_wrap(facetForm, scales = scales, nrow = nrow)
-        }
-        
-        if(regression)
-            p <- p + geom_smooth(method = "lm")
 
-       #DONE
-       return(p) 
+pointRange <- function(dataframe, x, y, errorBarYmax = NULL, errorBarYmin = NULL,scales = "free",
+                       
+                       # Label settings
+                       labelSize = 4, labelRound = 2,
+                       
+                       # Facet settings
+                       facet_x = NULL, facet_y = NULL, nrowFactor = 1, ncolFactor = 1,
+                        
+                       # Point settings
+                       alpha = 1, pColour = "black", pSize = 2,
+                       
+                       # Axis setting
+                       ylab = NULL, xlab = NULL
+                       
+                       ) {
+    #--------------------------
+    # Checking parameters 
+    #--------------------------
+    
+    if(!is.data.frame(dataframe)) stop ("dataframe has to be a data.frame")
+    if(!is.character(x) | !is.character(y) | length(x) > 1 | length(y) > 1) stop ("x and y have to be character vectors of length one")
+    if(!isCol(x, dataframe) | !isCol(y,dataframe)) stop ("x and y have to be columns of dataframe")
+    
+    if(!is.null(facet_x))
+       if(!isCol(facet_x, dataframe)) 
+           stop("facet_x has to be a column of dataframe or null")
+    if(!is.null(facet_y)) 
+        if(!isCol(facet_y, dataframe)) 
+            stop("facet_y has to be a column of dataframe or null")
+    
+    if(!is.null(errorBarYmax))
+       if(!isCol(errorBarYmax, dataframe)) 
+           stop("errorBarYmax has to be a column of dataframe or null")
+    
+    if(!is.null(errorBarYmin)) 
+        if(!isCol(errorBarYmin, dataframe)) 
+            stop("errorBarYmin has to be a column of dataframe or null")
+    
+    if((is.null(errorBarYmax) & !is.null(errorBarYmin) ) | (is.null(errorBarYmin) & !is.null(errorBarYmax) ) )
+        stop("errorBarYmax and errorBarYmin have to be both specified or NULL")
+    
+    #-----------------------------
+    # Assemblying Facets
+    #-----------------------------
+    
+    if (is.null(facet_y) & is.null(facet_x)) {
+        facetForm <- ""
+    } else if(is.null(facet_y)) {
+        facetForm <- paste0("~", facet_x)
+        ncol <- length(unique(dataframe[,facet_x]))
+        nrow <- 1 * nrowFactor
+    } else if(is.null(facet_x)) {
+        facetForm <- paste0(facet_y, "~")
+        ncol <- 1 * ncolFactor
+        nrow <- length(unique(dataframe[,facet_y]))
+    } else {
+        facetForm <- paste0(facet_y, "~", facet_x)
+        ncol <- length(unique(dataframe[,facet_x]))
+        nrow <- length(unique(dataframe[,facet_y]))
+    }
+    
+    #----------------------------
+    # Making plots
+    #----------------------------
+    
+    if(is.null(errorBarYmax)) {
+        p <- ggplot(dataframe, aes_string( x = x, y = y, ymin = y, ymax = y))
+    } else {
+        p <- ggplot(dataframe, aes_string( x = x, y = y, ymin = errorBarYmin, ymax = errorBarYmax))
+    }
+       
+    p <- p + geom_pointrange(alpha = alpha, size = pSize, colour = pColour)
+    
+    if(!is.null(ylab))
+        p <- p + ylab(ylab)
+    if(!is.null(xlab))
+        p <- p + xlab(xlab)
+    
+    if(!is.null(facet_x) | !is.null(facet_y)){
+        facetForm <- as.formula(facetForm)
+        p <- p + facet_wrap(facetForm, scales = scales, nrow = nrow)
+    }
+    
+
+    #DONE
+    return(p) 
+        
+    
+    
+}
+scatter <- function(dataframe, x, y, scales = "free", 
+                    
+                    # Label settings
+                    labelSize = 4, labelRound = 2,
+                    
+                    # Facet settings
+                    facet_x = NULL, facet_y = NULL, nrowFactor = 1, ncolFactor = 1,
+                     
+                    # Point settings
+                    alpha = 0.75, pColour = "black", pSize = 2,
+                    
+                    # Axis setting
+                    ylab = NULL, xlab = NULL,
+                    
+                    # Regression line options
+                    regression = F, regressionColour = "lightskyblue3", regressionSE = F
+                    ) {
+    
+    # Makes a scatter plot from a data frame with the following columns
+    # x = string; column with data for x axis
+    # y = string, column with data for y axis
+    # facet_x = factor, column with factor to subdivide the data and plot in different columns
+    # facet_y = factor, column with factor to subdivide the data and plot in different rows
+    #
+    # dataframe = data.frame, with the columns indicated above
+    #
+    # ... further parameters for facet_wrap
+    #
+    # returns a plot object of ggplot2
+    
+    #--------------------------
+    # Checking parameters 
+    #--------------------------
+    
+    if(!is.data.frame(dataframe)) stop ("dataframe has to be a data.frame")
+    if(!is.character(x) | !is.character(y) | length(x) > 1 | length(y) > 1) stop ("x and y have to be character vectors of length one")
+    if(!isCol(x, dataframe) | !isCol(y,dataframe)) stop ("x and y have to be columns of dataframe")
+    
+    if(!is.null(facet_x))
+       if(!isCol(facet_x, dataframe)) 
+           stop("facet_x has to be a column of dataframe or null")
+    if(!is.null(facet_y)) 
+        if(!isCol(facet_y, dataframe)) 
+            stop("facet_y has to be a column of dataframe or null")
+    
+    
+    #-----------------------------
+    # Getting correlation strings
+    #-----------------------------
+    
+    Params <- list(dataframe = dataframe, x = x, y = y, labelRound = labelRound)
+    
+    if (is.null(facet_y) & is.null(facet_x)) {
+        Params <- c(Params, list(cat = NULL))
+        facetForm <- ""
+    } else if(is.null(facet_y)) {
+        Params <- c(Params, list(cat = facet_x))
+        facetForm <- paste0("~", facet_x)
+        ncol <- length(unique(dataframe[,facet_x]))
+        nrow <- 1 * nrowFactor
+    } else if(is.null(facet_x)) {
+        Params <- c(Params, list(cat = facet_y))
+        facetForm <- paste0(facet_y, "~")
+        ncol <- 1 * ncolFactor
+        nrow <- length(unique(dataframe[,facet_y]))
+    } else {
+        Params <- c(Params, list(cat = c(facet_x, facet_y)))
+        facetForm <- paste0(facet_y, "~", facet_x)
+        ncol <- length(unique(dataframe[,facet_x]))
+        nrow <- length(unique(dataframe[,facet_y]))
+    }
+    
+    corString <- do.call(getCorString, Params)
+    
+    corString$x <- -Inf
+    corString$y <- Inf
+    colnames(corString)[ (ncol(corString) - 1) : ncol(corString)] <- c(x,y)
+    
+    #----------------------------
+    # Making plots
+    #----------------------------
+    p <- ggplot(dataframe, aes_string( x = x, y = y )) 
+    
+    if(regression)
+        p <- p + geom_smooth(method = "lm", colour = regressionColour, se = regressionSE)
+    
+    if(!is.null(ylab))
+        p <- p + ylab(ylab)
+    if(!is.null(xlab))
+        p <- p + xlab(xlab)
+    
+    p <- p + geom_point(alpha = alpha, size = pSize, colour = pColour) + 
+    geom_text(aes(label = text), data = corString, hjust = 0, vjust = 1, size = labelSize) + 
+    theme_bw()
+    
+    if(!is.null(facet_x) | !is.null(facet_y)){
+        facetForm <- as.formula(facetForm)
+        p <- p + facet_wrap(facetForm, scales = scales, nrow = nrow)
+    }
+    
+
+    #DONE
+    return(p) 
         
 }
 
