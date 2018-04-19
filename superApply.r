@@ -303,7 +303,7 @@ mergeListDir <- function(files, varNames, workingDir){
 
 
 getStateCount <- function(jobIds) {
-	jobInfo <- system(paste0("sacct --noheader --parsable2 -S `date -d '-20 days' +'%Y-%m-%d'` --format=JobID,JobName,State --job=", jobIds), intern = T )
+	jobInfo <- system(paste0("sacct --noheader --parsable2 -S `date -d '-5 days' +'%Y-%m-%d'` --format=JobID,JobName,State --job=", jobIds), intern = T )
 	jobInfo <- jobInfo[grepl(SAP_PREFIX, jobInfo)]
 	jobInfo <- jobInfo[ !grepl("\\..+", jobInfo) ]
 	
