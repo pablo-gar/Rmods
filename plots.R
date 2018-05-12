@@ -104,6 +104,11 @@ pointRange <- function(dataframe, x, y, errorBarYmax = NULL, errorBarYmin = NULL
 #' ... further parameters for facet_wrap
 #'
 #' returns a plot object of ggplot2
+#' @examples
+#' np <- 200 
+#' testData <- data.frame(x = rnorm(np), category_A = sample(c("A", "B"), np, replace = T), category_B = sample(c("X", "Y", "Z"), np, replace = T))
+#' testData$y <- jitter(testData$x, amount = 1.5)
+#' scatter(testData, x = "x", y = "y", facet_x = "category_A", facet_y = "category_B", regression = T)
 scatter <- function(dataframe, x, y, scales = "free", 
                     
                     # Label settings
@@ -176,8 +181,6 @@ scatter <- function(dataframe, x, y, scales = "free",
     #----------------------------
     p <- ggplot(dataframe, aes_string( x = x, y = y )) 
     
-    if(regression)
-        p <- p + geom_smooth(method = "lm", colour = regressionColour, se = regressionSE)
     
     if(!is.null(ylab))
         p <- p + ylab(ylab)
@@ -187,6 +190,9 @@ scatter <- function(dataframe, x, y, scales = "free",
     p <- p + geom_point(alpha = alpha, size = pSize, colour = pColour) + 
     geom_text(aes(label = text), data = corString, hjust = 0, vjust = 1, size = labelSize) + 
     theme_bw()
+    
+    if(regression)
+        p <- p + geom_smooth(method = "lm", colour = regressionColour, se = regressionSE)
     
     if(!is.null(facet_x) | !is.null(facet_y)){
         facetForm <- as.formula(facetForm)
