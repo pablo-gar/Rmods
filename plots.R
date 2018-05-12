@@ -92,6 +92,18 @@ pointRange <- function(dataframe, x, y, errorBarYmax = NULL, errorBarYmin = NULL
     
     
 }
+
+#' Makes a scatter plot from a data frame with the following columns
+#' x = string; column with data for x axis
+#' y = string, column with data for y axis
+#' facet_x = factor, column with factor to subdivide the data and plot in different columns
+#' facet_y = factor, column with factor to subdivide the data and plot in different rows
+#'
+#' dataframe = data.frame, with the columns indicated above
+#'
+#' ... further parameters for facet_wrap
+#'
+#' returns a plot object of ggplot2
 scatter <- function(dataframe, x, y, scales = "free", 
                     
                     # Label settings
@@ -110,17 +122,6 @@ scatter <- function(dataframe, x, y, scales = "free",
                     regression = F, regressionColour = "lightskyblue3", regressionSE = F
                     ) {
     
-    # Makes a scatter plot from a data frame with the following columns
-    # x = string; column with data for x axis
-    # y = string, column with data for y axis
-    # facet_x = factor, column with factor to subdivide the data and plot in different columns
-    # facet_y = factor, column with factor to subdivide the data and plot in different rows
-    #
-    # dataframe = data.frame, with the columns indicated above
-    #
-    # ... further parameters for facet_wrap
-    #
-    # returns a plot object of ggplot2
     
     #--------------------------
     # Checking parameters 

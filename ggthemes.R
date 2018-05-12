@@ -33,6 +33,8 @@ theme_base <- function(base_size = 12) {
 }
 
 
+#' Similar to theme_bw() but with no grid in the plotting area
+#' It looks good with busy scatter plots
 theme_noGrid <- function (base_size = 12, base_family = "") 
 {
     theme_grey(base_size = base_size, base_family = base_family) %+replace% 
@@ -52,6 +54,8 @@ theme_noGrid <- function (base_size = 12, base_family = "")
 }
 
 
+#' Similar to theme_bw() but with only a grid along the y axis in the plotting area
+#' It looks good with barplots
 theme_grid_y <- function (base_size = 12, base_family = "") 
 {
     theme_noGrid(base_size = base_size, base_family = base_family) %+replace% 
@@ -61,6 +65,7 @@ theme_grid_y <- function (base_size = 12, base_family = "")
             )
 }
 
+#' Similar to theme_bw() but with only a grid along the x axis in the plotting area
 theme_grid_x <- function (base_size = 12, base_family = "") 
 {
     theme_noGrid(base_size = base_size, base_family = base_family) %+replace% 
