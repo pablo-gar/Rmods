@@ -1,25 +1,29 @@
 library("biomaRt")
 
 ensemblToAlias <- function(x, organism = "hsapiens_gene_ensembl"){
-	ensembl <- useMart("ensembl")
-	ensembl <- useDataset(organism,mart=ensembl)
+	ensembl <- useMart("ensembl", dataset = organism, host = "www.ensembl.org", ensemblRedirect = FALSE)
 	
-	output <- getBM(filters = "ensembl_gene_id", values = x, attributes = c("ensembl_gene_id","hgnc_symbol"), mart = ensembl)
+	output <- getBM(filters = "ensembl_gene_id", values = unique(x), attributes = c("ensembl_gene_id","hgnc_symbol"), mart = ensembl)
+    output <- output[!duplicated(output$ensembl_gene_id),]
+    rownames(output) <- output$ensembl_gene_id
+    
 	genes <- vector(mode = "character", length = length(x))
 	names(genes) <- x
-	genes[ output$ensembl_gene_id ] <- output$hgnc_symbol
+	genes <- output[names(genes), "hgnc_symbol"]
 	
 	return(genes)
 }
 
 aliasToEnsembl <- function(x, organism = "hsapiens_gene_ensembl"){
-	ensembl <- useMart("ensembl")
-	ensembl <- useDataset(organism,mart=ensembl)
+	ensembl <- useMart("ensembl", dataset = organism, host = "www.ensembl.org", ensemblRedirect = FALSE)
 	
-	output <- getBM(filters = "hgnc_symbol", values = x, attributes = c("ensembl_gene_id","hgnc_symbol"), mart = ensembl)
+	output <- getBM(filters = "hgnc_symbol", values = unique(x), attributes = c("ensembl_gene_id","hgnc_symbol"), mart = ensembl)
+    output <- output[!duplicated(output$hgnc_symbol),]
+    rownames(output) <- output$hgnc_symbol
+    
 	genes <- vector(mode = "character", length = length(x))
 	names(genes) <- x
-	genes[ output$hgnc_symbol ] <- output$ensembl_gene_id
+	genes <- output[names(genes), "ensembl_gene_id"]
 	
 	return(genes)
 }
@@ -36,7 +40,7 @@ getGeneCordinates  <- function(x, organism = "hsapiens_gene_ensembl", geneType =
     
 	ensembl <- useMart("ensembl")
 	ensembl <- useDataset(organism, mart=ensembl)
-	output <- getBM(filters = geneType, values = x, attributes = c(geneType, "chromosome_name", "start_position", "end_position", "strand"), mart = ensembl)
+	output <- getBM(filters = geneType, values = x, attributes = c(geneType, "chromosome_name", "start_position", "end_position", "strand", "description"), mart = ensembl)
     
     # only main chromosomes
     output <- output[ output$chromosome_name %in% c(1:22, "X", "Y"), ]
