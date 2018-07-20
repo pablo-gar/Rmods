@@ -2,7 +2,37 @@ library(ggplot2)
 library(reshape)
 library(gplots)
 
+Heatmap <- function(x, heatmap_gradient = NULL, dendrogram = "none", Rowv = FALSE, Colv = FALSE, symbreaks = F, trace = "none", density = "none", ...) {
+    
+    library(gplots)
+    
+    if(is.null(heatmap_gradient)) 
+        heatmap_gradient <- colorRampPalette(c("#FFF5F0", "#3399ff"))(20)
+    
+    x <- as.matrix(x)
+    
+    #----
+    # Gathering pars for heatmap2
+    heatPars <- list(x = x,
+                     col = heatmap_gradient, 
+                     dendrogram = dendrogram, Rowv = Rowv, Colv = Colv,
+                     symbreaks = symbreaks,
+                     #scale = "column",
+                     trace = trace, density = density,
+                     ...
+                     )
+    
+    #----
+    
+    return(do.call(heatmap.2, heatPars))
+    
+    
+}
+
 pointRange <- function(dataframe, x, y, errorBarYmax = NULL, errorBarYmin = NULL,scales = "free",
+                       
+                       # Category by color
+                       colour = NULL,
                        
                        # Label settings
                        labelSize = 4, labelRound = 2,
@@ -23,7 +53,12 @@ pointRange <- function(dataframe, x, y, errorBarYmax = NULL, errorBarYmin = NULL
     
     if(!is.data.frame(dataframe)) stop ("dataframe has to be a data.frame")
     if(!is.character(x) | !is.character(y) | length(x) > 1 | length(y) > 1) stop ("x and y have to be character vectors of length one")
+    
     if(!isCol(x, dataframe) | !isCol(y,dataframe)) stop ("x and y have to be columns of dataframe")
+    
+    if(!is.null(colour))
+       if(!isCol(colour, dataframe)) 
+           stop("colour has to be a column of dataframe or null")
     
     if(!is.null(facet_x))
        if(!isCol(facet_x, dataframe)) 
@@ -67,19 +102,39 @@ pointRange <- function(dataframe, x, y, errorBarYmax = NULL, errorBarYmin = NULL
     # Making plots
     #----------------------------
     
+    # Plot
+    pointRangeArgs <- list()
+    aesPointRange <- list()
+    
+    # Base plot
     if(is.null(errorBarYmax)) {
-        p <- ggplot(dataframe, aes_string( x = x, y = y, ymin = y, ymax = y))
+        p <- ggplot(dataframe, aes_string( x = x, y = y))
+        aesPointRange <- c(aesPointRange, list(ymin = y, ymax = y))
     } else {
-        p <- ggplot(dataframe, aes_string( x = x, y = y, ymin = errorBarYmin, ymax = errorBarYmax))
+        p <- ggplot(dataframe, aes_string( x = x, y = y))
+        aesPointRange <- c(aesPointRange, list( ymin = errorBarYmin, ymax = errorBarYmax))
     }
        
-    p <- p + geom_pointrange(alpha = alpha, size = pSize, colour = pColour)
+    # Colour and size
+    if(!is.null(colour)) {
+        aesPointRange <- c(aesPointRange, list(colour = colour))
+        pointRangeArgs <- c(pointRangeArgs, list(position = position_dodge(width = 0.5)))
+    } else {
+        pointRangeArgs <- c(pointRangeArgs, list(colour = pColour))
+    }
     
+    # Gathering arguments for point range
+    aesPointRange <- do.call(aes_string, aesPointRange)
+    pointRangeArgs <- c(pointRangeArgs, list(mapping = aesPointRange, alpha = alpha, size = pSize))
+    p <- p + do.call(geom_pointrange, pointRangeArgs)
+    
+    # Axes
     if(!is.null(ylab))
         p <- p + ylab(ylab)
     if(!is.null(xlab))
         p <- p + xlab(xlab)
     
+    # Facets 
     if(!is.null(facet_x) | !is.null(facet_y)){
         facetForm <- as.formula(facetForm)
         p <- p + facet_wrap(facetForm, scales = scales, nrow = nrow)
