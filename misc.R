@@ -9,6 +9,55 @@ printTime <- function(x = "", carriageReturn = F) {
 	cat(first, as.character(Sys.time()), x)
 }
 
+#' Calcualtes bootstrap confidence interval after applying a function to a vector
+#' @param x vector
+#' @param FUN function to be applied to vector, has to return a numeric vector of size 1
+#' @param bootstrap_counts number of bootrsap rounds
+#' @param interval value between 0 and 1 depecting the confidence interval desired
+#' @param bootstrap_size value between 0 and 1 indicanting the percentage of data taken at each bootstrap repetition
+#' @param out_string logical, if true returns a string representation of the interval, otherwise return a vector of size 2
+bootstrap_confidence_interval <- function(x, FUN, bootstrap_counts = 1000, interval = 0.95, bootstrap_size = 1, out_string = F) {
+    
+    bootstrap_counts <- as.integer(bootstrap_counts[1])
+    interval <- interval[1]
+    bootstrap_size <- bootstrap_size[1]
+    out_string <- out_string[1]
+    
+    if(!is.numeric(x) | !is.vector(x))
+        stop("x has to be a numeric vector")
+    
+    if(bootstrap_counts < 1)
+        stop("bootstrap_counts has to be a positive integer")
+    
+    if(interval < 0 | interval > 1)
+        stop("interval has to be between 0 and 1")
+    
+    if(bootstrap_size < 0 | bootstrap_size > 1)
+        stop("bootstrap_size has to be between 0 and 1")
+    
+    if(!is.logical(out_string))
+        stop("out_string has to be logical")
+    
+    if(!is.function(FUN))
+        stop("FUN has to be a function")
+    
+    original <- FUN(x)
+    
+    results <- rep(NA, bootstrap_counts)
+    bSize <- round(length(x) * bootstrap_size)
+    for(i in 1:bootstrap_counts)
+        results[i] <-  FUN(x[sample(bSize, replace = T)])
+    
+    qSize <- (1 - interval) / 2 
+    confidence_interval <- 2*original - quantile(results, c(1 - qSize, 0 + qSize))
+    
+    if (out_string)
+        confidence_interval <- paste(confidence_interval, collapse = ",")
+    
+    return(confidence_interval)
+    
+}
+
 #' Gets labels of signifance for a vector of pvalues
 #' @param pvalues vector of pvalues
 #' @param label vector of the labels corresponding to each interval in `cutoff`
