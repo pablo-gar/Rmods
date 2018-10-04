@@ -20,14 +20,14 @@ performGO <-  function(genes, type = "Ensembl", ontology = "BP", gene_selection_
 get_GO_results <- function(x, test = "fisher", fdr_signif = F, bonf_signif = T, n = NULL) {
         
     if(sum(fdr_signif, bonf_signif, !is.null(n)) > 1)
-        stop("Only one of this arguments can be TRUE, fdr_signif, bonf_signif, n")
+        stop("Only one of these arguments can be TRUE, fdr_signif, bonf_signif, n")
         
     pvals <- score(x[[test]])
         
     if (is.null(n)) {
         result <- GenTable(x$GOdata, x[[test]], numChar = 1000) 
     } else {
-        result <- GenTable(x$GOdata, x[[test]], numChar = 1000, topNodes = 50) 
+        result <- GenTable(x$GOdata, x[[test]], numChar = 1000, topNodes = n) 
     }   
         
             
