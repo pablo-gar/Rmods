@@ -4,7 +4,6 @@ library("topGO")
 
 #' performGO
 #' @param gene a named numeric vector, names are gene ids and values are used for selection criteria of target genes
-#'
 #' @return a list the topGOdata and fisher resuts
 performGO <-  function(genes, type = "Ensembl", ontology = "BP", gene_selection_function = function(p) p < 0.05) {
     
@@ -43,3 +42,18 @@ get_GO_results <- function(x, test = "fisher", fdr_signif = F, bonf_signif = T, 
         
 }
 
+#' Returns genes that are in each category for the top n results in the output of get_GO_results
+#' @param genes vector of gene ids
+#' @param x output of get_GO_results
+#' @param GO_results performGO
+#' @param n number of GO for which genes are desired
+get_genes_GO <- function(genes, x, GO_results, n) {
+    GO_id_name <- setNames(x[,"Term"], x[,"GO.ID"])
+    results <- lapply(x[1:n, "GO.ID"], function(GO_id) {
+                          currentGenes <- genesInTerm(GO_results[["GOdata"]], GO_id)
+                          currentGenes <- currentGenes[[1]][currentGenes[[1]] %in% genes]
+                          data.frame(gene = currentGenes, GO.ID = GO_id, Term = GO_id_name[GO_id])
+                        })
+    results <- do.call(rbind, results)
+    return(results)
+}
