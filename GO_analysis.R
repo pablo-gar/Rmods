@@ -52,7 +52,11 @@ get_genes_GO <- function(genes, x, GO_results, n) {
     results <- lapply(x[1:n, "GO.ID"], function(GO_id) {
                           currentGenes <- genesInTerm(GO_results[["GOdata"]], GO_id)
                           currentGenes <- currentGenes[[1]][currentGenes[[1]] %in% genes]
-                          data.frame(gene = currentGenes, GO.ID = GO_id, Term = GO_id_name[GO_id])
+                          if(length(currentGenes) > 0) {
+                              return(data.frame(gene = currentGenes, GO.ID = GO_id, Term = GO_id_name[GO_id]))
+                          } else {
+                              return(data.frame(gene = "not_found", GO.ID = GO_id, Term = GO_id_name[GO_id]))
+                          }
                         })
     results <- do.call(rbind, results)
     return(results)

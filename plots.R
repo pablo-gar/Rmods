@@ -167,7 +167,7 @@ pointRange <- function(dataframe, x, y, errorBarYmax = NULL, errorBarYmin = NULL
 scatter <- function(dataframe, x, y, scales = "free", 
                     
                     # Label settings
-                    labelSize = 4, labelRound = 2,
+                    labelSize = 4, labelRound = 2, method_cor = "pearson",
                     
                     # Facet settings
                     facet_x = NULL, facet_y = NULL, nrowFactor = 1, ncolFactor = 1,
@@ -203,23 +203,23 @@ scatter <- function(dataframe, x, y, scales = "free",
     # Getting correlation strings
     #-----------------------------
     
-    Params <- list(dataframe = dataframe, x = x, y = y, labelRound = labelRound)
+    Params <- list(dataframe = dataframe, x = x, y = y, labelRound = labelRound, method = method_cor)
     
     if (is.null(facet_y) & is.null(facet_x)) {
-        Params <- c(Params, list(cat = NULL))
+        Params <- c(Params, list(category_col = NULL))
         facetForm <- ""
     } else if(is.null(facet_y)) {
-        Params <- c(Params, list(cat = facet_x))
+        Params <- c(Params, list(category_col = facet_x))
         facetForm <- paste0("~", facet_x)
         ncol <- length(unique(dataframe[,facet_x]))
         nrow <- 1 * nrowFactor
     } else if(is.null(facet_x)) {
-        Params <- c(Params, list(cat = facet_y))
+        Params <- c(Params, list(category_col = facet_y))
         facetForm <- paste0(facet_y, "~")
         ncol <- 1 * ncolFactor
         nrow <- length(unique(dataframe[,facet_y]))
     } else {
-        Params <- c(Params, list(cat = c(facet_x, facet_y)))
+        Params <- c(Params, list(category_col = c(facet_x, facet_y)))
         facetForm <- paste0(facet_y, "~", facet_x)
         ncol <- length(unique(dataframe[,facet_x]))
         nrow <- length(unique(dataframe[,facet_y]))
@@ -243,7 +243,7 @@ scatter <- function(dataframe, x, y, scales = "free",
         p <- p + xlab(xlab)
     
     p <- p + geom_point(alpha = alpha, size = pSize, colour = pColour) + 
-    geom_text(aes(label = text), data = corString, hjust = 0, vjust = 1, size = labelSize) + 
+    geom_text(aes(label = text), data = corString, hjust = 0, vjust = 1, size = labelSize, fontface = "italic") + 
     theme_bw()
     
     if(regression)
@@ -264,7 +264,7 @@ isCol <- function(x, mat) {
         return (x %in% colnames(mat))
 }
 
-getCorString <- function(dataframe, x, y, cat = NULL, labelRound = 2) {
+getCorString <- function(dataframe, x, y, category_col = NULL, labelRound = 2, method = "pearson") {
         
         # Calculates pearson correlation coefficient and pvalue between two columns
         # in a dataframe
@@ -275,8 +275,8 @@ getCorString <- function(dataframe, x, y, cat = NULL, labelRound = 2) {
         if(!is.character(x) | !is.character(y) | length(x) > 1 | length(y) > 1) stop ("x and y have to be character vectors of length one")
         if(!isCol(x, dataframe) | !isCol(y,dataframe)) stop ("x and y have to be columns of dataframe")
         
-        if(!is.null(cat)) {
-            for(i in cat) { 
+        if(!is.null(category_col)) {
+            for(i in category_col) { 
                 if(!isCol(i, dataframe)){ stop ("catgories have to be columns of dataaframe")}
             }
         } 
@@ -285,9 +285,9 @@ getCorString <- function(dataframe, x, y, cat = NULL, labelRound = 2) {
         #-------------------------
         
         # Construct category list of factors
-        if(!is.null(cat)) {
+        if(!is.null(category_col)) {
             catList <- list()
-            for(i in cat){
+            for(i in category_col){
                 catList[[i]] <- dataframe[,i]
             }
         } else {
@@ -295,20 +295,20 @@ getCorString <- function(dataframe, x, y, cat = NULL, labelRound = 2) {
         }
         
         # Loop by categorie 
-        results <- by(dataframe, catList, function(x, xVal, yVal, cat) { 
+        results <- by(dataframe, catList, function(x, xVal, yVal, category_col) { 
                       # Get correlations
-                      corR <- cor.test(x[,xVal], x[,yVal])
+                      corR <- cor.test(x[,xVal], x[,yVal], method = method)
                       corText <- paste0("r = ", signif(corR$estimate,labelRound) , "\np = ", signif(corR$p.value, labelRound))
                       result <- data.frame(r = corR$estimate, p =  corR$p.value, text = corText, stringsAsFactors = F)
                       # Append category names
-                      if(!is.null(cat)) {
-                          for(i in cat){
+                      if(!is.null(category_col)) {
+                          for(i in category_col){
                               result <- cbind (result, x[1,i], stringsAsFactors = F)
                           }
-                          colnames(result)[ (ncol(result) - length(cat) + 1) : ncol(result) ] <- cat
+                          colnames(result)[ (ncol(result) - length(category_col) + 1) : ncol(result) ] <- category_col
                       }
                       return(result)
-                   }, xVal = x, yVal = y, cat = cat)
+                   }, xVal = x, yVal = y, category_col = category_col)
         
         results <- do.call(rbind, results)
         return(results)

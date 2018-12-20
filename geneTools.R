@@ -28,6 +28,34 @@ aliasToEnsembl <- function(x, organism = "hsapiens_gene_ensembl"){
 	return(genes)
 }
 
+ensemblToDescription <- function(x, organism = "hsapiens_gene_ensembl"){
+	ensembl <- useMart("ensembl", dataset = organism, host = "www.ensembl.org", ensemblRedirect = FALSE)
+	
+	output <- getBM(filters = "ensembl_gene_id", values = unique(x), attributes = c("ensembl_gene_id", "description"), mart = ensembl)
+    output <- output[!duplicated(output$ensembl_gene_id),]
+    rownames(output) <- output$ensembl_gene_id
+    
+	genes <- vector(mode = "character", length = length(x))
+	names(genes) <- x
+	genes <- output[names(genes), "description"]
+	
+	return(genes)
+}
+
+aliasToDescription <- function(x, organism = "hsapiens_gene_ensembl"){
+	ensembl <- useMart("ensembl", dataset = organism, host = "www.ensembl.org", ensemblRedirect = FALSE)
+	
+	output <- getBM(filters = "hgnc_symbol", values = unique(x), attributes = c("hgnc_symbol", "description"), mart = ensembl)
+    output <- output[!duplicated(output$hgnc_symbol),]
+    rownames(output) <- output$hgnc_symbol
+    
+	genes <- vector(mode = "character", length = length(x))
+	names(genes) <- x
+	genes <- output[names(genes), "description"]
+	
+	return(genes)
+}
+
 #' Returns the coordinates of a vector of genes as a data.frame
 #' coordinates are 1-based
 #' @param x vector with gene id/names

@@ -46,10 +46,10 @@ bootstrap_confidence_interval <- function(x, FUN, bootstrap_counts = 1000, inter
     results <- rep(NA, bootstrap_counts)
     bSize <- round(length(x) * bootstrap_size)
     for(i in 1:bootstrap_counts)
-        results[i] <-  FUN(x[sample(bSize, replace = T)])
+        results[i] <- original - FUN(x[sample(bSize, replace = T)])
     
     qSize <- (1 - interval) / 2 
-    confidence_interval <- 2*original - quantile(results, c(1 - qSize, 0 + qSize))
+    confidence_interval <- original + quantile(results, c(0 + qSize, 1 - qSize))
     
     if (out_string)
         confidence_interval <- paste(confidence_interval, collapse = ",")
@@ -141,10 +141,18 @@ rankitNormalize <- function(x, IND = 1) {
     stopifnot(is.matrix(x))
     stopifnot(is.numeric(x))
 
-    x <- apply(x, IND, function(x) qnorm((rank(x) - 0.5) / length(x)))
+    x <- apply(x, IND, rankitNormalize_vector)
     if(IND == 1)
         x <- t(x)
 
+    return(x)
+
+}
+
+rankitNormalize_vector <- function(x) {
+
+    stopifnot(is.numeric(x))
+    x <- qnorm((rank(x) - 0.5) / length(x))
     return(x)
 
 }
@@ -157,4 +165,10 @@ sourceDir <- function (path, pattern = "\\.[rR]$", env = NULL, chdir = TRUE) {
     lapply(files, source, chdir = chdir)
 }
 
+slope <- function(x1, x2, y1, y2) {
+    return( (y2-y1) / (x2-x1) )
+}
 
+y_intercept <- function(x, y, m) {
+    return( y - m*x)
+}
