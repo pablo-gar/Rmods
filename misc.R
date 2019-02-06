@@ -62,14 +62,14 @@ bootstrap_confidence_interval <- function(x, FUN, bootstrap_counts = 1000, inter
 #' @param pvalues vector of pvalues
 #' @param label vector of the labels corresponding to each interval in `cutoff`
 #' @param cutoff vector of increasing cutoffs
-#' @param rm.na logical, if TRUE makes all NAs in the `pvalues` vectors into 1s
-labelPvalues <- function(pvalues, label = c("***", "**", "*", "n.s."), cutoff = c(0, 0.001, 0.01, 0.05, 1), rm.na = T) {
+#' @param na.rm logical, if TRUE makes all NAs in the `pvalues` vectors into 1s
+labelPvalues <- function(pvalues, label = c("***", "**", "*", "n.s."), cutoff = c(0, 0.001, 0.01, 0.05, 1), na.rm = T) {
     
     
     if(length(cutoff) - 1 != length(label))
         stop("the label vector has to be 1 - length of cutoff vector")
     
-    if(rm.na)
+    if(na.rm)
         pvalues[is.na(pvalues)] <- 1
     
     if(any(pvalues < 0 | pvalues > 1))
@@ -140,10 +140,16 @@ rankitNormalize <- function(x, IND = 1) {
 
     stopifnot(is.matrix(x))
     stopifnot(is.numeric(x))
+    
+    rowNames <- rownames(x)
+    colNames <- colnames(x)
 
     x <- apply(x, IND, rankitNormalize_vector)
     if(IND == 1)
         x <- t(x)
+    
+    rownames(x) <- rowNames
+    colnames(x) <- colNames
 
     return(x)
 
@@ -165,10 +171,52 @@ sourceDir <- function (path, pattern = "\\.[rR]$", env = NULL, chdir = TRUE) {
     lapply(files, source, chdir = chdir)
 }
 
+#' Gets the slope of two points
+#' @param x1 x coordinate of first point
+#' @param x2 x coordinate of second point
+#' @param y1 y coordinate of first point
+#' @param y2 y coordinate of second point
 slope <- function(x1, x2, y1, y2) {
     return( (y2-y1) / (x2-x1) )
 }
 
+#' Gets the y intercept of a point and slople
+#' @param x x coordinate point
+#' @param y y coordinate point
+#' @param m slope 
 y_intercept <- function(x, y, m) {
     return( y - m*x)
 }
+
+#' Creates a blue-black-yellow color vector intended for signed pvalues in log scale.
+#' The size of the resulting vector is 1 + 2(_maxPval_ - significant + 1)
+#' @param maxPval the max pvalue available
+#' @param significant the lowest significant pvalue
+get_colors_significant <- function(maxPval = 10, significant = 2) {
+
+    blues <- colorRampPalette(c("#4949FF", "#2F2F50"))(maxPval - significant + 1)
+    yellows <- colorRampPalette(c("#50502F", "#FFFF4A"))(maxPval - significant + 1)
+    blacks <- rep("grey20", significant * 2 -1)
+
+    return(c(blues,blacks,yellows))
+}
+
+#' Fisher's method to combine pvalues
+#' @param x a vector of pvalues
+#' @return a numeric pvalue
+
+fisher.pvalues  <- function (x){
+    
+    stopifnot(is.numeric(x))
+    stopifnot(all(x >= 0 & x <= 1))
+    
+    # To account for zeroes
+    x <- x + 1e-15
+    
+    deg_free <- length(x) * 2
+    y <- -2 * sum(log(x))
+    results <- 1 - pchisq(y, df = deg_free);
+    results <- as.numeric(results);
+    return(results) 
+}
+

@@ -4,13 +4,18 @@ library("topGO")
 
 #' performGO
 #' @param gene a named numeric vector, names are gene ids and values are used for selection criteria of target genes
+#' @param statistic Do _ks_ for ranked list
 #' @return a list the topGOdata and fisher resuts
-performGO <-  function(genes, type = "Ensembl", ontology = "BP", gene_selection_function = function(p) p < 0.05) {
+performGO <-  function(genes, type = "Ensembl", ontology = "BP", gene_selection_function = function(p) p < 0.05, statistic = "fisher", algorithm = "classic") {
     
     GOdata <- new("topGOdata", ontology = "BP", allGenes = genes, geneSel = gene_selection_function, annot = annFUN.org, mapping="org.Hs.eg.db", ID=type)
-    fisher <- runTest(GOdata, algorithm = "classic", statistic = "fisher")
+    test <- runTest(GOdata, algorithm = algorithm, statistic = statistic)
     
-    return(list(GOdata = GOdata, fisher = fisher))
+    results <- list(GOdata = GOdata, test = test)
+    names(results)[2] <- statistic
+    
+    return(results)
+    
 }
 
 

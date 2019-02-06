@@ -5,9 +5,9 @@
 # Rscript resultStats.r ~/scripts/postSNVanalyses/GWASglobalSusceptibility/GWASbyGene/results.RData /scratch/users/paedugar/uvProject/SNVfiles/mutCount/geneMaps/phenoMatrix/phenoMatrix_relativeCountWithinRange_C\>T_FC.txt
 
 
-source("~/scripts/rModules/GWAS.r")
-source("~/scripts/rModules/fileManagement.r")
-source("~/scripts/rModules/superApply.r")
+#source("~/scripts/rModules/GWAS.r")
+#source("~/scripts/rModules/fileManagement.r")
+#source("~/scripts/rModules/superApply.r")
 
 
 ########
@@ -64,40 +64,40 @@ FDRcalculation <- function(realPvals, permPvals) {
 	return(FDR)
 }
 
-getFDRMatQTL <- function(matQTL, permDir, FDR_cutoff = 0.02) {
-	
-	# This a specific function only used in the GWASbyGene pipeline
-	# matQTL is a single reseult of matrixQTL containing ALL pvalues
-	# and an extra slot with the id of the gene
-	# permDir is the directory where permutations of each gene are saved
-	# as individual RData files this files were created with=
-	# lmMatGRangePhenomatrixDeletme from the GWAS pipeline
-	
-	gene <- matQTL$geneName
-	permFile <-joinPath(permDir, paste0(gene, ".RData")) 	
-	
-	if(file.exists(permFile)) {
-		load(permFile)
-	} else {
-		return()
-	}
-	
-	real <- matQTL$all$eqtls
-	perm <- lmresults$all$eqtls$pvalue
-	
-	#browser()
-	FDR <- FDRcalculation(real$pvalue, perm)
-	
-	positiveCount <- FDR <= FDR_cutoff
-	if(sum(positiveCount) > 0) {
-		real <- real[positiveCount,]
-		real$FDR <- FDR[positiveCount]
-		return(real)
-	} else {
-		return()
-	}
-	
-}
+#getFDRMatQTL <- function(matQTL, permDir, FDR_cutoff = 0.02) {
+#	
+#	# This a specific function only used in the GWASbyGene pipeline
+#	# matQTL is a single reseult of matrixQTL containing ALL pvalues
+#	# and an extra slot with the id of the gene
+#	# permDir is the directory where permutations of each gene are saved
+#	# as individual RData files this files were created with=
+#	# lmMatGRangePhenomatrixDeletme from the GWAS pipeline
+#	
+#	gene <- matQTL$geneName
+#	permFile <-joinPath(permDir, paste0(gene, ".RData")) 	
+#	
+#	if(file.exists(permFile)) {
+#		load(permFile)
+#	} else {
+#		return()
+#	}
+#	
+#	real <- matQTL$all$eqtls
+#	perm <- lmresults$all$eqtls$pvalue
+#	
+#	#browser()
+#	FDR <- FDRcalculation(real$pvalue, perm)
+#	
+#	positiveCount <- FDR <= FDR_cutoff
+#	if(sum(positiveCount) > 0) {
+#		real <- real[positiveCount,]
+#		real$FDR <- FDR[positiveCount]
+#		return(real)
+#	} else {
+#		return()
+#	}
+#	
+#}
 	
 # FDR ESTIMATION BASED ON A SINGLE VECTOR OF PVALUES
 
