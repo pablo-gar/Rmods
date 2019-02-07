@@ -211,13 +211,13 @@ scatter <- function(dataframe, x, y, scales = "free",
     } else if(is.null(facet_y)) {
         Params <- c(Params, list(category_col = facet_x))
         facetForm <- paste0("~", facet_x)
-        ncol <- length(unique(dataframe[,facet_x]))
         nrow <- 1 * nrowFactor
+        ncol <- ceiling(length(unique(dataframe[,facet_x])) / nrow)
     } else if(is.null(facet_x)) {
         Params <- c(Params, list(category_col = facet_y))
-        facetForm <- paste0(facet_y, "~")
+        facetForm <- paste0(facet_y, "~.")
         ncol <- 1 * ncolFactor
-        nrow <- length(unique(dataframe[,facet_y]))
+        nrow <- ceiling (length(unique(dataframe[,facet_y])) / ncol)
     } else {
         Params <- c(Params, list(category_col = c(facet_x, facet_y)))
         facetForm <- paste0(facet_y, "~", facet_x)
