@@ -234,6 +234,7 @@ scatter <- function(dataframe, x, y, scales = "free",
     #----------------------------
     # Making plots
     #----------------------------
+    
     p <- ggplot(dataframe, aes_string( x = x, y = y )) 
     
     
@@ -242,8 +243,13 @@ scatter <- function(dataframe, x, y, scales = "free",
     if(!is.null(xlab))
         p <- p + xlab(xlab)
     
-    p <- p + geom_point(alpha = alpha, size = pSize, colour = pColour) + 
-    geom_text(aes(label = text), data = corString, hjust = 0, vjust = 1, size = labelSize, fontface = "italic") + 
+    if(pColour %in%  colnames(dataframe)) {
+        p <- p + geom_point(aes_string(colour = pColour), alpha = alpha, size = pSize)
+    } else {
+        p <- p + geom_point(alpha = alpha, size = pSize, colour = pColour)
+    }
+    
+    p <- p + geom_text(aes(label = text), data = corString, hjust = 0, vjust = 1, size = labelSize, fontface = "italic") + 
     theme_bw()
     
     if(regression)
