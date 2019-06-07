@@ -4,9 +4,80 @@ library("proto")
 plot_example <- function() {
     
     ggplot(diamonds, aes(x = carat, y = price)) +
-        geom_point() +
-        facet_wrap(~cut) 
+        geom_point(aes(colour = color)) +
+        labs(title = "Diamond price depends on its carat", 
+             subtitle = "Divided by cut",
+             caption = "Example plot") +
+        facet_wrap(~cut)
     
+}
+
+plot_example_2 <- function() {
+    
+    ggplot(diamonds, aes(x = carat, y = price)) +
+        geom_point(aes(colour = color)) +
+        labs(title = "Diamond price depends on its carat", 
+             subtitle = "Divided by cut",
+             caption = "Example plot")
+    
+}
+
+
+theme_sleek <- function() {
+    theme_bw() +
+        theme(
+              text = element_text(family = "sans", colour = "grey35"),
+              
+              panel.border  = element_blank(),
+              panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank(),
+              
+              axis.title.x = element_text(size = rel(1.05), face = "bold"),
+              axis.title.y = element_text(size = rel(1.05), face = "bold"),
+              axis.line = element_line(colour = "grey30", lineend = "square", size = 0.4),
+              axis.ticks = element_line(colour = "grey35", lineend = "square", size = 0.3),
+              
+              legend.box.background = element_rect(fill = "transparent", colour = "grey30"),
+              legend.background = element_blank(),#element_rect(fill = "transparent", colour = "grey30"),
+              legend.key = element_blank(),
+              legend.title = element_text(face = "bold"),
+              
+              panel.background = element_blank(),
+              
+              plot.background = element_blank(),
+              plot.title = element_text(size = rel(1.2), colour = "gray25"),
+              plot.subtitle = element_text(size = rel(1), colour = "gray25", face = "italic"),
+              plot.caption = element_text(size = rel(0.8), colour = "gray25", hjust = 1),
+              
+              #strip.background = element_rect(fill = "white", colour = "white", linetype = 1, size = 0.1),
+              strip.background = element_blank(),
+              strip.text = element_text(face = "bold.italic", colour = "grey55", size = 10),
+              
+              )
+}
+
+theme_sleek_grey <- function() {
+    theme_sleek() +
+        theme(
+              plot.background = element_rect(fill = "grey90", colour = "grey30", size = rel (1.2)),
+              panel.background = element_rect(fill = "grey85", colour = "transparent"),
+              legend.box.background = element_rect(fill = "grey85", colour = "transparent"),
+              strip.background = element_rect(fill = "grey82", colour = "transparent"),
+              strip.text = element_text(face = "bold.italic", colour = "grey45", size = 10),
+              axis.line = element_blank()
+              )
+}
+
+theme_grid <- function() {
+    theme(panel.grid.major = element_line(size = rel(0.5), colour = "grey75"))
+}
+
+theme_grid_y <- function() {
+    theme(panel.grid.major.y = element_line(size = rel(0.5), colour = "grey75"))
+}
+
+theme_grid_x <- function() {
+    theme(panel.grid.major.x = element_line(size = rel(0.5), colour = "grey75"))
 }
 
 theme_base <- function(base_size = 12) {
