@@ -1,5 +1,14 @@
 library("ggplot2")
 library("proto")
+
+plot_example <- function() {
+    
+    ggplot(diamonds, aes(x = carat, y = price)) +
+        geom_point() +
+        facet_wrap(~cut) 
+    
+}
+
 theme_base <- function(base_size = 12) {
   structure(list(
     axis.line =         element_blank(),
