@@ -1,3 +1,5 @@
+library(dplyr)
+
 printTime <- function(x = "", carriageReturn = F) {
 	# Prints to console the current date and time followed by
 	# the message(s) in x
@@ -158,7 +160,8 @@ rankitNormalize <- function(x, IND = 1) {
 rankitNormalize_vector <- function(x) {
 
     stopifnot(is.numeric(x))
-    x <- qnorm((rank(x) - 0.5) / length(x))
+    noNa <- !is.na(x)
+    x[noNa] <- qnorm((rank(x[noNa]) - 0.5) / sum(noNa))
     return(x)
 
 }
@@ -220,3 +223,33 @@ fisher.pvalues  <- function (x){
     return(results) 
 }
 
+rolling_median <- function(x, y = NULL, windows = 100, by_quantile = T) {
+    
+    if(is.null(y))
+        y <- x
+    
+    if(by_quantile) {
+        groups <- quantile(y, seq(0,1, length.out=windows))
+    } else {
+        groups <- seq(min(y), max(y), length.out = windows)
+    }
+    
+    dat <- data.frame(x = x, y = y)
+    
+    dat$group <- findInterval(dat$y, groups, all.inside = T)
+    
+    medians <-
+        dat %>%
+        group_by(group) %>%
+        summarise(median = median(x)) %>%
+        ungroup() %>%
+        as.data.frame()
+    rownames(medians) <- medians$group
+    
+    dat$median_mut_group <- medians[as.character(dat$group), "median"]
+    
+    result <- dat$x - dat$median_mut_group
+    
+    return(result)
+    
+}
