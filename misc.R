@@ -1,4 +1,6 @@
-library(dplyr)
+suppressMessages({
+    library("dplyr")
+})
 
 printTime <- function(x = "", carriageReturn = F) {
 	# Prints to console the current date and time followed by
@@ -253,3 +255,80 @@ rolling_median <- function(x, y = NULL, windows = 100, by_quantile = T) {
     return(result)
     
 }
+
+#' Obtains individual rsquared for each predictor variable in x
+#' on y, after regressing values from y based on the rest x predictors
+#' @param X  data.frame
+#' @param x vector[character] - column names of predictors
+#' @param y character - column name
+semi_partial_lm <- function(X, y, x) {
+    
+    if(!all(x %in% colnames(X)))
+        stop('all values in x have to be column names of X')
+    
+    if(length(y) != 1)
+        stop('y can only be of length 1')
+    
+    if(!y %in% colnames(X))
+        stop('y has to be a column name of X')
+    
+    results <- list()
+    for(i in 1:length(x)) {
+        
+        #resid_no_x <- resid(lm(as.formula(paste0(y, ' ~ ', paste0(x[-i], collapse=' + '))), data = X, na.action=na.exclude))
+        #current_lm <- lm(resid_no_x ~ X[,i,drop =T], na.action=na.exclude)
+        
+        resid_no_x <- resid(lm(as.formula(paste0(x[i], ' ~ ', paste0(x[-i], collapse=' + '))), data = X, na.action=na.exclude))
+        current_lm <- lm(X[,y,drop=T] ~ resid_no_x, na.action=na.exclude)
+        
+        results[[i]] <- cbind(as.data.frame(x[i]), 
+                              r.squared = summary(current_lm)$r.squared,
+                              summary(current_lm)$coefficients[2,,drop=F],
+                              stringsAsFactors=F)
+                        
+        
+    }
+    
+    results <-do.call(rbind, results) 
+    rownames(results) <- results[,1]
+    return(results)
+    
+}
+
+#' Get's pvalue of lm
+lmp <- function (modelobject) {
+    if (class(modelobject) != "lm") stop("Not an object of class 'lm' ")
+    f <- summary(modelobject)$fstatistic
+    p <- pf(f[1],f[2],f[3],lower.tail=F)
+    attributes(p) <- NULL
+    return(p)
+}
+
+#' Concatenate table files
+#'
+#' @param x vector[character] - file paths to table to Concatenate
+#' @param sep character - passed to read.table
+#' @param header character - passed to read.table
+#; @param ... - passed to read.table
+
+concatenate_table_files <- function(x, sep = '\t', header = T, ...) {
+    
+    # Check that all files exist
+    for(i in x) {
+        if(!file.exists(i))
+            stop(paste('File', i, 'does not exist'))
+    }
+    
+    results <- list()
+    
+    # Read all files
+    for(i in x) 
+        results[[i]] <- read.table(i, sep=sep, header=header, ...)
+    
+    results <- do.call(rbind, results)
+    rownames(results) <- 1:nrow(results)
+    
+    return(results)
+   
+}
+
