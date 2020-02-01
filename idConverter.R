@@ -1,6 +1,14 @@
 if(!file.exists("./ensembl_to_symbol.txt"))
     stop("ensembl-to-symbol conversion table not found, are you sure you are doing 'source(x, chdir = T)'")
 
+#library("Homo.sapiens")
+#
+#GENE_ID_ALIAS <- as.data.frame(org.Hs.egSYMBOL)
+#GENE_ID_ENSEMBL <- as.data.frame(org.Hs.egENSEMBL)
+#GENE_ID_ENSEMBL <- GENE_ID_ENSEMBL[!duplicated(GENE_ID_ENSEMBL[,1]),]
+#rownames(GENE_ID_ALIAS) <- GENE_ID_ALIAS[,1]
+#rownames(GENE_ID_ENSEMBL) <- GENE_ID_ENSEMBL[,1]
+
 ENSEMBL_TO_SYMBOL <- read.table("./ensembl_to_symbol.txt", sep = "\t", stringsAsFactors = F, header = T, comment.char = "")
 
 ensemblToAlias <- function(x, organism = "hsapiens_gene_ensembl"){
@@ -23,6 +31,17 @@ ensemblToAlias_offline <- function(x){
 	genes <- vector(mode = "character", length = length(x))
 	names(genes) <- x
 	genes[ output[,2] ] <-  output[,1]
+	
+	return(genes)
+}
+
+aliasToEnsembl_offline <- function(x){
+    
+	output <- ENSEMBL_TO_SYMBOL[ ENSEMBL_TO_SYMBOL[,1] %in% x,]
+    
+	genes <- vector(mode = "character", length = length(x))
+	names(genes) <- x
+	genes[ output[,1] ] <-  output[,2]
 	
 	return(genes)
 }

@@ -166,14 +166,13 @@ cor_by_group_fdr <- function(dataframe, x, y, group_col, n_perm, p, method = "sp
     
     
     # Real pvalue
-    
     real_cor <- dataframe %>%
         group_by(!!group_col) %>%
         summarise(cor_result = cor_helper(!!x, !!y, permute = F, method = method)) %>%
+        #summarise(n = n()) %>%
         ungroup() 
     
     real_p <- rep(1, n_perm)
-    
     for(i in seq_along(real_p)) {
         perm_cor <- dataframe %>%
             group_by(!!group_col) %>%

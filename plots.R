@@ -167,7 +167,7 @@ pointRange <- function(dataframe, x, y, errorBarYmax = NULL, errorBarYmin = NULL
 scatter <- function(dataframe, x, y, scales = "free", 
                     
                     # Label settings
-                    labelSize = 4, labelRound = 2, method_cor = "pearson",
+                    labelSize = 4, labelRound = 2, method_cor = "spearman",
                     
                     # Facet settings
                     facet_x = NULL, facet_y = NULL, nrowFactor = 1, ncolFactor = 1,

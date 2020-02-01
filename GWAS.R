@@ -72,7 +72,6 @@ GWAS_Matrix <- function(vcfFile, phenotype, yieldSize = 10e5, genomicRange = NUL
 		
 		# Get best imputed genotype
 		cat("\t", as.character(Sys.time()), " Getting genotypes\n")			
-		
 		if(genotype == "DS"){
 			genoMat <- vcf_yield			
 		}else if(genotype == "GT") {
@@ -292,7 +291,6 @@ GWAS <- function(vcfFile, phenotype, yieldSize = 10e3, parallel = F, tasks = NUL
 		
 		# Get best imputed genotype
 		cat("\t", as.character(Sys.time()), " Getting genotypes\n")			
-		
 		if(dosage){
 			genoMat <- vcf_yield			
 		}else{
@@ -1022,6 +1020,11 @@ findNames <- function(vcfFile,x){
             x[i] <- NA
         }
 	}
+    
+    y<-x[!is.na(x)]
+    if (length(y) == 0)
+        stop('Individuals not found in vcf File')
+
 	
 	return(x)
 }
