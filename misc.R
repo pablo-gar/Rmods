@@ -2,6 +2,15 @@ suppressMessages({
     library("dplyr")
 })
 
+#' Performs a correlation test and returns the specified 'val' from the output of cor.test
+#' It returns NA in case there's an error
+
+cor_test <- function(..., val) {
+    
+    tryCatch(cor.test(...)[[val]], error = function(e) NA)
+    
+}
+
 printTime <- function(x = "", carriageReturn = F) {
 	# Prints to console the current date and time followed by
 	# the message(s) in x
@@ -327,6 +336,54 @@ concatenate_table_files <- function(x, sep = '\t', header = T, ...) {
     
     results <- do.call(rbind, results)
     rownames(results) <- 1:nrow(results)
+    
+    return(results)
+   
+}
+
+#' Concatenate table files can deal with empty file and appends an extra column with the filename
+#' 
+#' @param x vector[character] - file paths to table to Concatenate
+#' @param sep character - passed to read.table
+#' @param header character - passed to readr:::read_delim
+#' @param id_names vector[character] - ids of each file which will be appended as an extra column, if non are given then file will be used
+#' @param join_rows logical - if true it joins by rows the files read. It has precedence over join_cols. If both join_cols and join_rows are FALSE it returns a list instead
+#' @param join_cols logical - if true it joins by cols the files read. If both join_cols and join_rows are FALSE it returns a list instead
+#' @param ... - passed to readr:::read_delim
+
+concatenate_table_files2 <- function(x, header = T, id_names=NULL, join_rows=T, join_cols=F, read_function=read_tsv,...) {
+    
+    library('readr')
+    library('purrr')
+    
+    read_function <- match.fun(read_function)
+    
+    
+    if(join_rows) {
+        MAP <- match.fun(map2_dfr)
+    } else if(join_cols){
+        MAP <- match.fun(map2_dfc)
+    } else {
+        MAP <- match.fun(map2)
+    }
+    
+    if(is.null(id_names)) 
+        id_names <- basename(x)
+        
+    if(length(x) != length(id_names))
+        stop('Length of x and id_names have to be equal')
+    
+    results <- MAP(x, id_names, function(x, y, ...){
+                           a <- read_function(x, col_names=header, ...)
+                           if(nrow(a) == 0)
+                               return(NULL)
+                           
+                           a$id_names <- y
+                           return(a)
+                              }, ...)
+    
+    if(!join_rows & !join_cols)
+        names(results) <- map_chr(results, ~.x$id_names[1])
     
     return(results)
    

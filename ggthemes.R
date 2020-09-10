@@ -1,6 +1,8 @@
 library("ggplot2")
 library("proto")
 
+COLOR_BLIND_PALETTE <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
 plot_example <- function() {
     
     ggplot(diamonds, aes(x = carat, y = price)) +
